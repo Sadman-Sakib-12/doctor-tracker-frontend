@@ -78,13 +78,31 @@ export default function DoctorsPage() {
       <div className="flex-1 p-6 space-y-4">
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <SearchInput
             value={params.search || ""}
             onChange={(s) => setParams((p) => ({ ...p, search: s, page: 1 }))}
             placeholder="Search doctors..."
           />
-          <div className="flex gap-2 sm:ml-auto">
+          <input
+            type="text"
+            placeholder="Specialization"
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 w-40"
+            value={(params as Record<string,unknown>).specialization as string || ""}
+            onChange={(e) => setParams((p) => ({ ...p, specialization: e.target.value || undefined, page: 1 }))}
+          />
+          <div className="flex gap-2 items-center">
+            <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+              value={params.startDate || ""}
+              onChange={(e) => setParams((p) => ({ ...p, startDate: e.target.value || undefined, page: 1 }))}
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+              value={params.endDate || ""}
+              onChange={(e) => setParams((p) => ({ ...p, endDate: e.target.value || undefined, page: 1 }))}
+            />
+          </div>
+          <div className="flex gap-2 ml-auto">
             <select
               className="text-sm border border-gray-300 rounded-lg px-3 py-2"
               value={params.sort || "-createdAt"}
