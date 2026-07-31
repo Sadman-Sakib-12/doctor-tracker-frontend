@@ -104,10 +104,10 @@ Every list endpoint needs search, filter, sort, and pagination. Without abstract
 ## Visual Evidence
 
 ### Desktop View
-![Doctor Tracker Dashboard](https://ibb.co.com/rRrYBhHJ)
+![Doctor Tracker Dashboard](https://i.ibb.co/rRrYBhHJ/screenshot.png)
 
 ### Mobile View
-![Doctor Tracker Mobile](https://ibb.co.com/rRrYBhHJ)
+![Doctor Tracker Mobile](https://i.ibb.co/rRrYBhHJ/screenshot.png)
 
 ---
 
