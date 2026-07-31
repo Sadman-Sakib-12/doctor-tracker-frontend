@@ -1,9 +1,8 @@
 import axios from "axios";
-import { useAuthStore } from "@/store/auth.store";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api",
-  withCredentials: false, // use Bearer token instead of cookies
+  withCredentials: false,
   headers: { "Content-Type": "application/json" },
   timeout: 10000,
 });
@@ -17,12 +16,13 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Redirect to login on 401
+// Redirect to login on 401 — clear storage directly (no circular import)
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response?.status === 401 && typeof window !== "undefined") {
-      useAuthStore.getState().reset();
+      localStorage.removeItem("token");
+      localStorage.removeItem("auth-storage");
       window.location.href = "/login";
     }
     return Promise.reject(error);
