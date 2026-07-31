@@ -87,6 +87,7 @@ export default function DoctorsPage() {
         <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-2">
           <Stethoscope className="w-12 h-12 opacity-30" />
           <p className="font-medium">No doctors found</p>
+          <p className="text-sm">Add your first doctor using the button above</p>
         </div>
       </td></tr>
     );
@@ -99,9 +100,9 @@ export default function DoctorsPage() {
         <td className="px-4 py-3 text-gray-600">{doc.email}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1">
-            <button onClick={() => router.push(`/doctors/${doc._id}`)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition"><Eye className="w-4 h-4" /></button>
-            <button onClick={() => setEditDoc(doc)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition"><Pencil className="w-4 h-4" /></button>
-            <button onClick={() => setDeleteId(doc._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => router.push(`/doctors/${doc._id}`)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 transition" title="View patients"><Eye className="w-4 h-4" /></button>
+            <button onClick={() => setEditDoc(doc)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition" title="Edit"><Pencil className="w-4 h-4" /></button>
+            <button onClick={() => setDeleteId(doc._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
           </div>
         </td>
       </tr>
@@ -112,17 +113,24 @@ export default function DoctorsPage() {
     <div className="flex flex-col h-full overflow-y-auto">
       <Header title="Doctors" />
       <div className="flex-1 p-6 space-y-4">
+        {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-3">
-          <SearchInput value={params.search || ""} onChange={(s) => setParams((p) => ({ ...p, search: s, page: 1 }))} placeholder="Search doctors..." />
-          <input type="text" placeholder="Specialization" className="text-sm border border-gray-300 rounded-lg px-3 py-2 w-40 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            onChange={(e) => setParams((p) => ({ ...p, specialization: e.target.value || undefined, page: 1 }))} />
-          <div className="flex gap-2 items-center">
-            <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
-              onChange={(e) => setParams((p) => ({ ...p, startDate: e.target.value || undefined, page: 1 }))} />
-            <span className="text-gray-400 text-sm">to</span>
-            <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
-              onChange={(e) => setParams((p) => ({ ...p, endDate: e.target.value || undefined, page: 1 }))} />
-          </div>
+          <SearchInput
+            value={params.search ?? ""}
+            onChange={(s) => setParams((p) => ({ ...p, search: s || undefined, page: 1 }))}
+            placeholder="Search doctors..."
+          />
+          <input
+            type="text"
+            placeholder="Specialization"
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 w-40 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => setParams((p) => ({ ...p, specialization: e.target.value || undefined, page: 1 }))}
+          />
+          <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+            onChange={(e) => setParams((p) => ({ ...p, startDate: e.target.value || undefined, page: 1 }))} />
+          <span className="text-gray-400 text-sm">to</span>
+          <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+            onChange={(e) => setParams((p) => ({ ...p, endDate: e.target.value || undefined, page: 1 }))} />
           <div className="flex gap-2 ml-auto">
             <select className="text-sm border border-gray-300 rounded-lg px-3 py-2"
               onChange={(e) => setParams((p) => ({ ...p, sort: e.target.value }))}>
@@ -134,6 +142,7 @@ export default function DoctorsPage() {
           </div>
         </div>
 
+        {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

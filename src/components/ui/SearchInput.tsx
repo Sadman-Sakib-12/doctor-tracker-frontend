@@ -8,21 +8,25 @@ interface SearchInputProps {
   placeholder?: string;
 }
 
-export default function SearchInput({ value, onChange, placeholder = "Search..." }: SearchInputProps) {
+export default function SearchInput({
+  value,
+  onChange,
+  placeholder = "Search...",
+}: SearchInputProps) {
   const [local, setLocal] = useState(value);
-  // Keep a stable ref to onChange so the debounce effect doesn't re-run
+  // Stable ref — never goes in any dependency array
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
-  // Debounce: only call parent after 500ms of no typing
+  // Debounce 500ms — only depends on `local`, NOT on `onChange`
   useEffect(() => {
     const t = setTimeout(() => {
       onChangeRef.current(local);
     }, 500);
     return () => clearTimeout(t);
-  }, [local]); // ONLY re-run when local text changes
+  }, [local]);
 
-  // Sync if parent resets value externally
+  // Sync if parent resets value
   useEffect(() => {
     setLocal(value);
   }, [value]);
@@ -38,7 +42,10 @@ export default function SearchInput({ value, onChange, placeholder = "Search..."
       />
       {local && (
         <button
-          onClick={() => { setLocal(""); onChangeRef.current(""); }}
+          onClick={() => {
+            setLocal("");
+            onChangeRef.current("");
+          }}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
         >
           <X className="w-4 h-4" />

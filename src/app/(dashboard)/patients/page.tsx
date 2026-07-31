@@ -23,6 +23,7 @@ export default function PatientsPage() {
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Load doctors once for the edit form dropdown
   useEffect(() => {
     doctorApi.getAll({ limit: 100 }).then((r) => setDoctors(r.data.data)).catch(() => {});
   }, []);
@@ -81,6 +82,7 @@ export default function PatientsPage() {
         <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-2">
           <Users className="w-12 h-12 opacity-30" />
           <p className="font-medium">No patients found</p>
+          <p className="text-sm">Try adjusting your filters</p>
         </div>
       </td></tr>
     );
@@ -94,8 +96,8 @@ export default function PatientsPage() {
         <td className="px-4 py-3 text-gray-600">{p.phone || "—"}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-1">
-            <button onClick={() => setEditPatient(p)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition"><Pencil className="w-4 h-4" /></button>
-            <button onClick={() => setDeleteId(p._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => setEditPatient(p)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition" title="Edit"><Pencil className="w-4 h-4" /></button>
+            <button onClick={() => setDeleteId(p._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition" title="Delete"><Trash2 className="w-4 h-4" /></button>
           </div>
         </td>
       </tr>
@@ -106,27 +108,33 @@ export default function PatientsPage() {
     <div className="flex flex-col h-full overflow-y-auto">
       <Header title="Patients" />
       <div className="flex-1 p-6 space-y-4">
+        {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <SearchInput value={params.search || ""} onChange={(s) => setParams((p) => ({ ...p, search: s, page: 1 }))} placeholder="Search patients..." />
-          <select className="text-sm border border-gray-300 rounded-lg px-3 py-2" value={params.condition || ""}
+          <SearchInput
+            value={params.search ?? ""}
+            onChange={(s) => setParams((p) => ({ ...p, search: s || undefined, page: 1 }))}
+            placeholder="Search patients..."
+          />
+          <select className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+            value={params.condition ?? ""}
             onChange={(e) => setParams((p) => ({ ...p, condition: e.target.value || undefined, page: 1 }))}>
             <option value="">All Conditions</option>
             {CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select className="text-sm border border-gray-300 rounded-lg px-3 py-2" value={params.gender || ""}
+          <select className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+            value={params.gender ?? ""}
             onChange={(e) => setParams((p) => ({ ...p, gender: e.target.value || undefined, page: 1 }))}>
             <option value="">All Genders</option>
             {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
-          <div className="flex gap-2 items-center ml-auto">
-            <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
-              onChange={(e) => setParams((p) => ({ ...p, startDate: e.target.value || undefined, page: 1 }))} />
-            <span className="text-gray-400 text-sm">to</span>
-            <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
-              onChange={(e) => setParams((p) => ({ ...p, endDate: e.target.value || undefined, page: 1 }))} />
-          </div>
+          <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+            onChange={(e) => setParams((p) => ({ ...p, startDate: e.target.value || undefined, page: 1 }))} />
+          <span className="text-gray-400 text-sm">to</span>
+          <input type="date" className="text-sm border border-gray-300 rounded-lg px-3 py-2"
+            onChange={(e) => setParams((p) => ({ ...p, endDate: e.target.value || undefined, page: 1 }))} />
         </div>
 
+        {/* Table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

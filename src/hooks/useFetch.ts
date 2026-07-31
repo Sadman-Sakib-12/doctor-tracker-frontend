@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 /**
- * Generic fetch hook that only re-fetches when `params` deeply changes.
- * Prevents infinite loops caused by object reference changes.
+ * Fetches data when `params` values change.
+ * Uses JSON.stringify comparison to avoid re-fetching on object reference changes.
  */
 export function useFetch<T>(
   fetcher: (params: Record<string, unknown>) => Promise<T>,
@@ -12,35 +12,40 @@ export function useFetch<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Serialize params to detect actual value changes (not reference changes)
-  const paramsKey = JSON.stringify(params);
-  const prevKey = useRef<string>("");
+  // Stable ref to fetcher so it never causes re-runs
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
 
-  const run = async (p: Record<string, unknown>) => {
+  // Serialize params — only re-run effect when actual values change
+  const paramsStr = JSON.stringify(params);
+
+  const run = useCallback(async (p: Record<string, unknown>) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetcher(p);
+      const result = await fetcherRef.current(p);
       setData(result);
     } catch (e: unknown) {
       const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ?? "Failed to load data";
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        "Failed to load data";
       setError(msg);
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Only fires when the serialized params string changes
   useEffect(() => {
-    // Only fetch if params actually changed in value
-    if (prevKey.current === paramsKey) return;
-    prevKey.current = paramsKey;
-    run(params);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paramsKey]);
+    run(JSON.parse(paramsStr));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramsStr]);
 
-  const refetch = () => run(params);
+  const refetch = useCallback(() => {
+    run(JSON.parse(paramsStr));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paramsStr]);
 
   return { data, loading, error, refetch };
 }
