@@ -31,7 +31,6 @@ export default function DoctorDetailPage() {
   }, [id]);
 
   const fetchPatients = useCallback(async () => {
-    setLoading(true);
     try {
       const { data } = await doctorApi.getPatients(id, params);
       setPatients(data.data);
@@ -40,7 +39,20 @@ export default function DoctorDetailPage() {
     } finally { setLoading(false); }
   }, [id, params]);
 
-  useEffect(() => { fetchPatients(); }, [fetchPatients]);
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      try {
+        const { data } = await doctorApi.getPatients(id, params);
+        if (ignore) return;
+        setPatients(data.data);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+      } finally { if (!ignore) setLoading(false); }
+    };
+    load();
+    return () => { ignore = true; };
+  }, [id, params]);
 
   const handleAdd = async (data: Omit<Patient, "_id" | "createdAt" | "updatedAt">) => {
     setSaving(true);
@@ -62,6 +74,8 @@ export default function DoctorDetailPage() {
       toast.success("Patient updated");
       setEditPatient(null);
       fetchPatients();
+    } catch (e: unknown) {
+      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error");
     } finally { setSaving(false); }
   };
 

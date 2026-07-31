@@ -11,8 +11,12 @@ interface PaginationProps {
 }
 
 export default function Pagination({ page, totalPages, total, limit, onChange }: PaginationProps) {
-  const start = (page - 1) * limit + 1;
+  const start = total === 0 ? 0 : (page - 1) * limit + 1;
   const end = Math.min(page * limit, total);
+
+  const numPages = Math.min(5, totalPages);
+  const windowStart = Math.max(1, Math.min(page - 2, totalPages - numPages + 1));
+  const pages = Array.from({ length: numPages }, (_, i) => windowStart + i);
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t bg-white">
@@ -28,23 +32,20 @@ export default function Pagination({ page, totalPages, total, limit, onChange }:
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
-        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-          const p = Math.max(1, Math.min(page - 2 + i, totalPages - 4 + i));
-          return (
-            <button
-              key={p}
-              onClick={() => onChange(p)}
-              className={clsx(
-                "w-8 h-8 text-sm rounded-lg transition",
-                p === page
-                  ? "bg-blue-600 text-white font-semibold"
-                  : "hover:bg-gray-100 text-gray-700"
-              )}
-            >
-              {p}
-            </button>
-          );
-        })}
+        {pages.map((p) => (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            className={clsx(
+              "w-8 h-8 text-sm rounded-lg transition",
+              p === page
+                ? "bg-blue-600 text-white font-semibold"
+                : "hover:bg-gray-100 text-gray-700"
+            )}
+          >
+            {p}
+          </button>
+        ))}
         <button
           onClick={() => onChange(page + 1)}
           disabled={page >= totalPages}
