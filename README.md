@@ -103,8 +103,11 @@ Every list endpoint needs search, filter, sort, and pagination. Without abstract
 
 ## Visual Evidence
 
-> Screenshots should be added after running the app locally.  
-> Capture: Login page · Dashboard · Doctors list · Doctor detail · Patients list (Desktop 1440px + Mobile 375px)
+### Desktop View
+![Doctor Tracker Dashboard](https://ibb.co.com/rRrYBhHJ)
+
+### Mobile View
+![Doctor Tracker Mobile](https://ibb.co.com/rRrYBhHJ)
 
 ---
 
