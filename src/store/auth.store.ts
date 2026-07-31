@@ -8,6 +8,8 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  _hasHydrated: boolean;
+  setHasHydrated: (val: boolean) => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
@@ -20,6 +22,9 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (val) => set({ _hasHydrated: val }),
 
       login: async (email, password) => {
         set({ isLoading: true });
@@ -33,11 +38,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        try {
-          await authApi.logout();
-        } catch {
-          // ignore
-        }
+        try { await authApi.logout(); } catch { /* ignore */ }
         localStorage.removeItem("token");
         set({ user: null, token: null, isAuthenticated: false });
       },
@@ -53,7 +54,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "auth-storage",
-      partialize: (state) => ({ token: state.token, user: state.user }),
+      partialize: (state) => ({ token: state.token, user: state.user, isAuthenticated: state.isAuthenticated }),
+      // Mark hydrated after localStorage is loaded
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
