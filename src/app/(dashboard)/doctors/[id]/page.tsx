@@ -1,26 +1,23 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Plus, Trash2, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Pencil, Users, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { doctorApi, patientApi } from "@/lib/api";
-import { Doctor, Patient, QueryParams } from "@/types";
+import { Doctor, Patient, QueryParams, PaginatedResponse } from "@/types";
 import Header from "@/components/layout/Header";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Pagination from "@/components/ui/Pagination";
 import Modal from "@/components/ui/Modal";
 import PatientForm from "@/components/patients/PatientForm";
+import { useFetch } from "@/hooks/useFetch";
 
 export default function DoctorDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [doctor, setDoctor] = useState<Doctor | null>(null);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [params, setParams] = useState<QueryParams>({ page: 1, limit: 10 });
-  const [loading, setLoading] = useState(true);
+  const [patientParams, setPatientParams] = useState<QueryParams>({ page: 1, limit: 10 });
   const [saving, setSaving] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editPatient, setEditPatient] = useState<Patient | null>(null);
@@ -30,52 +27,40 @@ export default function DoctorDetailPage() {
     doctorApi.getOne(id).then((r) => setDoctor(r.data.data)).catch(() => toast.error("Doctor not found"));
   }, [id]);
 
-  const fetchPatients = useCallback(async () => {
-    try {
-      const { data } = await doctorApi.getPatients(id, params);
-      setPatients(data.data);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
-    } finally { setLoading(false); }
-  }, [id, params]);
+  const { data, loading, error, refetch } = useFetch<PaginatedResponse<Patient>>(
+    (p) => doctorApi.getPatients(id, p as QueryParams).then((r) => r.data),
+    patientParams as unknown as Record<string, unknown>
+  );
 
-  useEffect(() => {
-    let ignore = false;
-    const load = async () => {
-      try {
-        const { data } = await doctorApi.getPatients(id, params);
-        if (ignore) return;
-        setPatients(data.data);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
-      } finally { if (!ignore) setLoading(false); }
-    };
-    load();
-    return () => { ignore = true; };
-  }, [id, params]);
+  const patients = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 1;
 
-  const handleAdd = async (data: Omit<Patient, "_id" | "createdAt" | "updatedAt">) => {
+  // Track previous patientParams key to avoid first-render double-fetch
+  const prevKey = useRef("");
+  const currentKey = JSON.stringify(patientParams);
+  if (prevKey.current !== currentKey) prevKey.current = currentKey;
+
+  const handleAdd = async (formData: Omit<Patient, "_id" | "createdAt" | "updatedAt">) => {
     setSaving(true);
     try {
-      await doctorApi.addPatient(id, data);
+      await doctorApi.addPatient(id, formData);
       toast.success("Patient added");
       setShowAdd(false);
-      fetchPatients();
+      refetch();
     } catch (e: unknown) {
       toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error");
     } finally { setSaving(false); }
   };
 
-  const handleUpdate = async (data: Omit<Patient, "_id" | "createdAt" | "updatedAt">) => {
+  const handleUpdate = async (formData: Omit<Patient, "_id" | "createdAt" | "updatedAt">) => {
     if (!editPatient) return;
     setSaving(true);
     try {
-      await patientApi.update(editPatient._id, data);
+      await patientApi.update(editPatient._id, formData);
       toast.success("Patient updated");
       setEditPatient(null);
-      fetchPatients();
-    } catch (e: unknown) {
-      toast.error((e as { response?: { data?: { message?: string } } })?.response?.data?.message || "Error");
+      refetch();
     } finally { setSaving(false); }
   };
 
@@ -85,81 +70,110 @@ export default function DoctorDetailPage() {
       await patientApi.delete(deleteId);
       toast.success("Patient deleted");
       setDeleteId(null);
-      fetchPatients();
+      refetch();
     } catch { toast.error("Failed to delete"); }
+  };
+
+  const renderBody = () => {
+    if (loading) return (
+      <tr><td colSpan={6}>
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+          <p className="text-sm text-gray-400">Loading patients...</p>
+        </div>
+      </td></tr>
+    );
+    if (error) return (
+      <tr><td colSpan={6}>
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <p className="text-red-500 font-medium">{error}</p>
+          <Button variant="secondary" size="sm" onClick={refetch}><RefreshCw className="w-4 h-4" /> Retry</Button>
+        </div>
+      </td></tr>
+    );
+    if (patients.length === 0) return (
+      <tr><td colSpan={6}>
+        <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2">
+          <Users className="w-10 h-10 opacity-30" />
+          <p className="font-medium">No patients yet</p>
+          <p className="text-sm">Add the first patient using the button above</p>
+        </div>
+      </td></tr>
+    );
+    return patients.map((p) => (
+      <tr key={p._id} className="hover:bg-gray-50 transition-colors">
+        <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
+        <td className="px-4 py-3 text-gray-600">{p.age}</td>
+        <td className="px-4 py-3"><Badge label={p.gender} /></td>
+        <td className="px-4 py-3"><Badge label={p.condition} /></td>
+        <td className="px-4 py-3 text-gray-600">{p.phone || "—"}</td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-1">
+            <button onClick={() => setEditPatient(p)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition"><Pencil className="w-4 h-4" /></button>
+            <button onClick={() => setDeleteId(p._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition"><Trash2 className="w-4 h-4" /></button>
+          </div>
+        </td>
+      </tr>
+    ));
   };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      <Header title={doctor?.name || "Doctor Detail"} />
+      <Header title={doctor?.name ?? "Doctor Detail"} />
       <div className="flex-1 p-6 space-y-6">
 
-        {/* Back + Info */}
         <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition">
           <ArrowLeft className="w-4 h-4" /> Back to Doctors
         </button>
 
+        {/* Doctor info card */}
         {doctor && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <div><p className="text-gray-400">Specialization</p><p className="font-semibold mt-0.5">{doctor.specialization}</p></div>
-            <div><p className="text-gray-400">Hospital</p><p className="font-semibold mt-0.5">{doctor.hospital}</p></div>
-            <div><p className="text-gray-400">Phone</p><p className="font-semibold mt-0.5">{doctor.phone}</p></div>
-            <div><p className="text-gray-400">Email</p><p className="font-semibold mt-0.5">{doctor.email}</p></div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600 font-bold text-lg">{doctor.name[0]}</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">{doctor.name}</h2>
+                <p className="text-sm text-blue-600 font-medium">{doctor.specialization}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-gray-400 text-xs mb-1">Hospital</p>
+                <p className="font-semibold text-gray-800">{doctor.hospital}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-gray-400 text-xs mb-1">Phone</p>
+                <p className="font-semibold text-gray-800">{doctor.phone}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3 col-span-2 sm:col-span-1">
+                <p className="text-gray-400 text-xs mb-1">Email</p>
+                <p className="font-semibold text-gray-800 truncate">{doctor.email}</p>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Patients table */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b">
-            <h3 className="font-semibold text-gray-800">Patients ({total})</h3>
-            <Button size="sm" onClick={() => setShowAdd(true)}>
-              <Plus className="w-4 h-4" /> Add Patient
-            </Button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-800">Patients <span className="text-gray-400 font-normal text-sm">({total})</span></h3>
+            <Button size="sm" onClick={() => setShowAdd(true)}><Plus className="w-4 h-4" /> Add Patient</Button>
           </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
-            </div>
-          ) : patients.length === 0 ? (
-            <p className="text-center text-gray-400 py-16">No patients yet</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      {["Name","Age","Gender","Condition","Phone","Actions"].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {patients.map((p) => (
-                      <tr key={p._id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 font-medium text-gray-900">{p.name}</td>
-                        <td className="px-4 py-3 text-gray-600">{p.age}</td>
-                        <td className="px-4 py-3"><Badge label={p.gender} /></td>
-                        <td className="px-4 py-3"><Badge label={p.condition} /></td>
-                        <td className="px-4 py-3 text-gray-600">{p.phone || "—"}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => setEditPatient(p)} className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition">
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => setDeleteId(p._id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-600 transition">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination page={params.page!} totalPages={totalPages} total={total} limit={params.limit!}
-                onChange={(p) => setParams((prev) => ({ ...prev, page: p }))} />
-            </>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>{["Name","Age","Gender","Condition","Phone","Actions"].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">{renderBody()}</tbody>
+            </table>
+          </div>
+          {!loading && !error && patients.length > 0 && (
+            <Pagination page={patientParams.page!} totalPages={totalPages} total={total} limit={patientParams.limit!}
+              onChange={(p) => setPatientParams((prev) => ({ ...prev, page: p }))} />
           )}
         </div>
       </div>
