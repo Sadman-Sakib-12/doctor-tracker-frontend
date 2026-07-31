@@ -1,9 +1,10 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
-  withCredentials: true,
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api",
+  withCredentials: false, // use Bearer token instead of cookies
   headers: { "Content-Type": "application/json" },
+  timeout: 10000,
 });
 
 // Attach token from localStorage on every request
